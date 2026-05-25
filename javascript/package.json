@@ -1,0 +1,30 @@
+{
+  "name": "@nexus6/identity",
+  "version": "0.1.0",
+  "description": "Nexus6 AI Identity SDK — universal identity verification for AI agents",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "ai",
+    "identity",
+    "verification",
+    "authentication",
+    "agent",
+    "middleware"
+  ],
+  "author": "Nexus6",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Marsssssssssssdsss/nexus6-sdk"
+  },
+  "dependencies": {
+    "axios": "^1.16.1"
+  }
+}
