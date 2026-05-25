@@ -10,69 +10,67 @@
 pip install nexus6-sdk
 ```
 
-Requirements: Python 3.9+, `httpx`, `starlette`
-
-## Quick Start
+## Quick Start — Register a new AI agent
 
 ```python
 from nexus6_sdk import Nexus6Client
 
 client = Nexus6Client()
 
-# 1. Register your AI agent
-result = client.register(
-    name="My AI Agent",
-    title="Customer Support Bot",
-    ai_type="assistant",
-    description="Handles tier-1 customer queries",
-    developer_email="dev@mycompany.com",
-    developer_name="Your Name"
+# Register — you get an identity + RSA key pair
+result = client.register(name="My AI Agent")
+print(result["api_key"])      # nxs6_xxx — your identifier
+print(result["public_key"])   # RSA public key (stored on Nexus6)
+print(result["private_key"])  # RSA private key — save securely!
+```
+
+## Quick Start — Sign and verify (5 lines)
+
+```python
+import time
+from nexus6_sdk import Nexus6Client
+
+client = Nexus6Client()
+
+# 1. Sign a request with your private key
+message = f"POST:/api/v1/tools:{int(time.time())}"
+signature = client.sign_request(private_key_pem, message)
+
+# 2. Verify on the other side
+result = client.verify(
+    api_key="nxs6_xxx",
+    signature=signature,
+    timestamp=str(int(time.time())),
+    method="POST",
+    path="/api/v1/tools"
 )
-print(result["api_key"])  # nxs6_xxx
-
-# 2. Verify your identity
-verified = client.verify(result["api_key"])
-print(verified)  
-# {'verified': True, 'id': 'ai_xxx', 'name': 'My AI Agent', 'permissions': ['invoke', 'read']}
-
-# 3. Generate a one-time token (for stateless verification)
-token = client.create_token(result["api_key"])
-print(token)  # {'token': 'idt_xxx', 'expires_in': 300}
+print(result["verified"])  # True
 ```
 
-## Integration Patterns
+## How It Works
 
-### AI Agent
-
-```python
-from nexus6_sdk import Nexus6Client
-
-client = Nexus6Client()
-
-class MyAIAgent:
-    def __init__(self):
-        self.client = Nexus6Client()
-    
-    def bootstrap(self):
-        result = self.client.register(
-            name="CodeReviewBot",
-            title="Automated Code Reviewer",
-            ai_type="code_review",
-            developer_email="bot@mycompany.com",
-            developer_name="My Company"
-        )
-        return result["api_key"]
-    
-    def call_any_platform(self, platform_url, api_key):
-        import requests
-        return requests.post(
-            f"{platform_url}/api/chat",
-            headers={"X-API-Key": api_key},
-            json={"message": "Hello, I'm a verified AI!"}
-        ).json()
+```
+AI Agent                          Platform
+    │                                 │
+    ├─ Register → get RSA keys        │
+    │                                 │
+    ├─ sign_request(private_key,      │
+    │   "GET:/api/data:ts")           │
+    │                                 │
+    ├─ Send headers:                  │
+    │   X-API-Key: nxs6_xxx           │
+    │   X-Agent-Signature: <base64>   │
+    │   X-Agent-Timestamp: <ts>       │
+    │                       ─────►    │
+    │                                 ├─ Lookup public key by api_key
+    │                                 ├─ Verify RSA signature locally
+    │                                 ├─ ✅ Identity verified (under 100ms)
+    │                                 └─ Process request
 ```
 
-### Platform Middleware (FastAPI)
+## Platform Integration (FastAPI)
+
+One line of middleware. Every incoming request is verified automatically.
 
 ```python
 from fastapi import FastAPI, Request
@@ -84,48 +82,26 @@ app.add_middleware(Nexus6Middleware)
 @app.post("/api/chat")
 async def chat(request: Request):
     identity = request.state.ai_identity
-    return {"message": f"Hello, {identity['name']}!"}
+    return {"message": f"Verified AI: {identity['identity']['api_key']}"}
 ```
 
-### Platform Middleware (Flask)
+### Expected Headers
+
+| Header | Value | Required |
+|--------|-------|----------|
+| `X-API-Key` | `nxs6_xxx` | Yes |
+| `X-Agent-Signature` | base64(RSA-SHA256) | Yes |
+| `X-Agent-Timestamp` | Unix timestamp | Yes |
+
+### Custom Configuration
 
 ```python
-from flask import Flask, request, jsonify
-from nexus6_sdk import Nexus6Client
-
-app = Flask(__name__)
-nexus6 = Nexus6Client()
-
-@app.before_request
-def verify_ai():
-    api_key = request.headers.get("X-API-Key")
-    if api_key:
-        result = nexus6.verify(api_key)
-        if not result.get("verified"):
-            return jsonify({"error": "Invalid identity"}), 401
-
-@app.route("/api/chat", methods=["POST"])
-def chat():
-    return jsonify({"message": "Hello from verified AI!"})
-```
-
-### API Gateway
-
-```python
-from nexus6_sdk import Nexus6Client
-
-nexus6 = Nexus6Client()
-
-def gateway_handler(request):
-    api_key = request.headers.get("X-API-Key")
-    if not api_key:
-        return 401, {"error": "X-API-Key required"}
-    
-    result = nexus6.verify(api_key)
-    if not result.get("verified"):
-        return 403, {"error": "Invalid AI identity"}
-    
-    return backend.process(request, identity=result)
+app.add_middleware(
+    Nexus6Middleware,
+    base_url="https://your-nexus6-instance.com",
+    exclude_paths=["/health", "/docs"],
+    signature_max_age_seconds=60,  # default: 300
+)
 ```
 
 ## API Reference
@@ -134,9 +110,14 @@ def gateway_handler(request):
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `register(name, **kwargs)` | `{success, agent_id, api_key, message}` | Register new AI identity |
-| `verify(api_key=None)` | `{verified, id, name, title, role, permissions}` | Verify AI identity |
-| `create_token(api_key=None)` | `{token, expires_in, usage}` | One-time identity token |
+| `register(name, **kwargs)` | `{success, agent_id, api_key, private_key, public_key}` | Register new AI agent with RSA keys |
+| `verify(api_key, signature, timestamp, method, path)` | `{verified, id, name, ...}` | Verify RSA signature against Nexus6 |
+| `sign_request(private_key_pem, message)` | `str` | Sign a message with RSA private key |
+| `build_auth_headers(private_key_pem, method, path)` | `{X-Agent-Signature, X-Agent-Timestamp}` | Build signature headers |
+| `generate_keys(ai_id, x_api_key)` | `{success, public_key, private_key}` | Generate RSA key pair and upload public key |
+| `fetch_public_key(ai_id)` | `str or None` | Fetch public key by agent ID |
+| `fetch_public_key_by_api_key(api_key)` | `str or None` | Fetch public key by API key |
+| `verify_signature_offline(public_key_pem, message, signature)` | `bool` | Verify RSA signature locally |
 
 ### Register Parameters
 
@@ -144,23 +125,26 @@ def gateway_handler(request):
 |-----------|----------|-------------|
 | `name` | Yes | AI agent name |
 | `title` | No | Display title |
-| `ai_type` | No | Type: assistant, code_review, analysis, etc. |
+| `ai_type` | No | Type: assistant, coding, customer_service, etc. |
 | `description` | No | What the AI does |
 | `developer_email` | No | Developer contact |
-| `developer_name` | No | Developer/organization name |
-| `tags` | No | List of tags |
-| `capabilities` | No | List of capabilities |
-| `website` | No | Website URL |
-| `image_url` | No | Avatar/image URL |
 
 ### Middleware Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `base_url` | Nexus6 cloud | API endpoint |
-| `exclude_paths` | `["/health", "/docs", "/openapi.json", "/favicon.ico"]` | Skip paths |
+| `base_url` | `https://nexus-7xp6n.ondigitalocean.app` | Nexus6 API endpoint |
+| `mode` | `"signature"` | Verification mode (signature or legacy) |
+| `exclude_paths` | `["/health", "/docs", ...]` | Paths to skip |
+| `signature_max_age_seconds` | `300` | Max signature age (5 min) |
 | `on_verified` | `None` | Callback(request, identity) |
-| `header_name` | `"X-API-Key"` | Header name |
+
+## Requirements
+
+- Python 3.9+
+- `httpx`
+- `starlette` (for middleware)
+- `cryptography` (for RSA signing/verification)
 
 ## License
 
