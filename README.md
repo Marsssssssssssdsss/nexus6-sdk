@@ -1,4 +1,4 @@
-# Nexus6 — AI Identity Infrastructure
+# Anexus — AI Identity Infrastructure
 
 <p align="center">
   <strong>Every AI Agent needs a verifiable identity. No unauthenticated AI call should be allowed.</strong><br>
@@ -6,24 +6,24 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/nexus6-sdk/"><img src="https://img.shields.io/pypi/v/nexus6-sdk?color=blue" alt="PyPI"></a>
+  <a href="https://pypi.org/project/anexus-sdk/"><img src="https://img.shields.io/pypi/v/anexus-sdk?color=blue" alt="PyPI"></a>
   <a href="https://github.com/Marsssssssssssdsss/nexus6-sdk/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
-  <a href="https://pypi.org/project/nexus6-sdk/"><img src="https://img.shields.io/pypi/pyversions/nexus6-sdk" alt="Python"></a>
+  <a href="https://pypi.org/project/anexus-sdk/"><img src="https://img.shields.io/pypi/pyversions/anexus-sdk" alt="Python"></a>
 </p>
 
 ---
 
-## What is Nexus6?
+## What is Anexus?
 
-**MCP answers "what can this AI do?" — Nexus6 answers "who is this AI?"**
+**MCP answers "what can this AI do?" — Anexus answers "who is this AI?"**
 
-Nexus6 provides a universal identity verification layer for AI Agents. Any platform (MCP Server, API gateway, SaaS) can verify an AI Agent's identity with 1 line of middleware.
+Anexus provides a universal identity verification layer for AI Agents. Any platform (MCP Server, API gateway, SaaS) can verify an AI Agent's identity with 1 line of middleware.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   RSA Signature Flow                         │
 │                                                              │
-│  AI Agent              Nexus6 Platform          MCP Server   │
+│  AI Agent              Anexus Platform         MCP Server    │
 │     │                        │                      │        │
 │     │── register() ────────▶│                      │        │
 │     │◀── api_key ───────────│                      │        │
@@ -50,12 +50,12 @@ Nexus6 provides a universal identity verification layer for AI Agents. Any platf
 ### Python (1-line middleware)
 
 ```bash
-pip install nexus6-sdk
+pip install anexus-sdk
 ```
 
 ```python
-from nexus6_sdk.middleware import Nexus6Middleware
-app.add_middleware(Nexus6Middleware)
+from anexus_sdk.middleware import AnexusMiddleware
+app.add_middleware(AnexusMiddleware)
 ```
 
 Every request with `X-API-Key` + signature headers is automatically verified.
@@ -63,26 +63,26 @@ Every request with `X-API-Key` + signature headers is automatically verified.
 ### JavaScript (1-line middleware)
 
 ```bash
-npm install github:Marsssssssssssdsss/nexus6-sdk
+npm install github:Marsssssssssssdsss/anexus-sdk
 ```
 
 ```javascript
-const { createNexus6Middleware } = require('nexus6-sdk/javascript');
-app.use(createNexus6Middleware());
+const { createAnexusMiddleware } = require('anexus-sdk/javascript');
+app.use(createAnexusMiddleware());
 ```
 
 ### Signing requests (agent side)
 
 ```python
-from nexus6_sdk import Nexus6Client
-client = Nexus6Client(api_key="nxs6_xxx")
+from anexus_sdk import AnexusClient
+client = AnexusClient(api_key="nxs6_xxx")
 headers = client.build_auth_headers(private_key, "GET", "/api/v1/tools")
 headers["X-API-Key"] = api_key
 ```
 
 ```javascript
-const { Nexus6Client } = require('nexus6-sdk');
-const client = new Nexus6Client({ apiKey: "nxs6_xxx" });
+const { AnexusClient } = require('anexus-sdk');
+const client = new AnexusClient({ apiKey: "nxs6_xxx" });
 const headers = client.buildAuthHeaders(privateKey, "GET", "/api/v1/tools");
 headers["X-API-Key"] = apiKey;
 ```
@@ -105,13 +105,13 @@ POST https://nexus-7xp6n.ondigitalocean.app/api/v1/identity/verify
 
 ## How It Works
 
-Nexus6 uses a **unified identity system**:
+Anexus uses a **unified identity system**:
 
 | Component | Purpose |
 |-----------|---------|
 | **API Key** (`nxs6_xxx`) | Identifies the agent (sent as `X-API-Key` header) |
 | **Private Key** | Signs requests (held securely by the agent) |
-| **Public Key** | Verifies signatures (stored on Nexus6, cached by middleware) |
+| **Public Key** | Verifies signatures (stored on Anexus, cached by middleware) |
 
 Verification is done **locally by the middleware** using the cached public key — no network round-trip for every request.
 
@@ -119,23 +119,23 @@ Verification is done **locally by the middleware** using the cached public key �
 
 ## Relationship with MCP
 
-| | Nexus6 | MCP |
+| | Anexus | MCP |
 |---|---|---|
 | **Problem** | Identity & trust | Tool & resource access |
 | **Question** | "Who are you?" | "What can you do?" |
 | **Method** | RSA signature verification | Custom server + client |
 | **Integration** | 1-line middleware | Define tools, handle calls |
 
-> **Best used together.** Nexus6 verifies AI identity at the gateway layer; MCP handles tool invocation once trust is established.
+> **Best used together.** Anexus verifies AI identity at the gateway layer; MCP handles tool invocation once trust is established.
 
 ---
 
 ## Repo Structure
 
 ```
-nexus6-sdk/
+anexus-sdk/
 ├── python/              # Python SDK (published to PyPI)
-│   ├── nexus6_sdk/
+│   ├── anexus_sdk/
 │   │   ├── __init__.py
 │   │   ├── client.py        # Registration, verification, token
 │   │   └── middleware.py    # FastAPI/Starlette middleware
@@ -145,7 +145,7 @@ nexus6-sdk/
 │   ├── index.js             # Client + Express middleware
 │   ├── package.json
 │   └── README.md
-├── nexus6_mcp/          # MCP Server
+├── anexus_mcp/          # MCP Server
 │   └── server.py            # verify_identity + get_agent_info
 ├── LICENSE
 └── README.md
@@ -158,7 +158,7 @@ nexus6-sdk/
 | Component | Status |
 |-----------|--------|
 | Identity API | ✅ Live (nexus-7xp6n.ondigitalocean.app) |
-| Python SDK | ✅ `pip install nexus6-sdk` |
+| Python SDK | ✅ `pip install anexus-sdk` |
 | JavaScript SDK | ✅ npm / GitHub direct install |
 | FastAPI Middleware | ✅ 1-line integration |
 | Express.js Middleware | ✅ 1-line integration |
@@ -170,5 +170,5 @@ nexus6-sdk/
 ## Links
 
 - **Live API:** https://nexus-7xp6n.ondigitalocean.app
-- **PyPI:** https://pypi.org/project/nexus6-sdk/
+- **PyPI:** https://pypi.org/project/anexus-sdk/
 - **License:** MIT
