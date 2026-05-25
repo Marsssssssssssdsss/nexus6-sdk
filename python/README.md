@@ -1,26 +1,26 @@
-# Nexus6 Python SDK
+# Anexus Python SDK
 
-[![PyPI](https://img.shields.io/pypi/v/nexus6-sdk?color=blue)](https://pypi.org/project/nexus6-sdk/)
-[![Python](https://img.shields.io/pypi/pyversions/nexus6-sdk)](https://pypi.org/project/nexus6-sdk/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Marsssssssssssdsss/nexus6-sdk/blob/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/Anexus-sdk?color=blue)](https://pypi.org/project/Anexus-sdk/)
+[![Python](https://img.shields.io/pypi/pyversions/Anexus-sdk)](https://pypi.org/project/Anexus-sdk/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Marsssssssssssdsss/Anexus-sdk/blob/main/LICENSE)
 
 ## Installation
 
 ```bash
-pip install nexus6-sdk
+pip install Anexus-sdk
 ```
 
 ## Quick Start — Register a new AI agent
 
 ```python
-from nexus6_sdk import Nexus6Client
+from Anexus_sdk import AnexusClient
 
-client = Nexus6Client()
+client = AnexusClient()
 
 # Register — you get an identity + RSA key pair
 result = client.register(name="My AI Agent")
 print(result["api_key"])      # nxs6_xxx — your identifier
-print(result["public_key"])   # RSA public key (stored on Nexus6)
+print(result["public_key"])   # RSA public key (stored on Anexus)
 print(result["private_key"])  # RSA private key — save securely!
 ```
 
@@ -28,9 +28,9 @@ print(result["private_key"])  # RSA private key — save securely!
 
 ```python
 import time
-from nexus6_sdk import Nexus6Client
+from Anexus_sdk import AnexusClient
 
-client = Nexus6Client()
+client = AnexusClient()
 
 # 1. Sign a request with your private key
 message = f"POST:/api/v1/tools:{int(time.time())}"
@@ -74,10 +74,10 @@ One line of middleware. Every incoming request is verified automatically.
 
 ```python
 from fastapi import FastAPI, Request
-from nexus6_sdk.middleware import Nexus6Middleware
+from Anexus_sdk.middleware import AnexusMiddleware
 
 app = FastAPI()
-app.add_middleware(Nexus6Middleware)
+app.add_middleware(AnexusMiddleware)
 
 @app.post("/api/chat")
 async def chat(request: Request):
@@ -97,8 +97,8 @@ async def chat(request: Request):
 
 ```python
 app.add_middleware(
-    Nexus6Middleware,
-    base_url="https://your-nexus6-instance.com",
+    AnexusMiddleware,
+    base_url="https://your-Anexus-instance.com",
     exclude_paths=["/health", "/docs"],
     signature_max_age_seconds=60,  # default: 300
 )
@@ -106,12 +106,12 @@ app.add_middleware(
 
 ## API Reference
 
-### Nexus6Client
+### AnexusClient
 
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `register(name, **kwargs)` | `{success, agent_id, api_key, private_key, public_key}` | Register new AI agent with RSA keys |
-| `verify(api_key, signature, timestamp, method, path)` | `{verified, id, name, ...}` | Verify RSA signature against Nexus6 |
+| `verify(api_key, signature, timestamp, method, path)` | `{verified, id, name, ...}` | Verify RSA signature against Anexus |
 | `sign_request(private_key_pem, message)` | `str` | Sign a message with RSA private key |
 | `build_auth_headers(private_key_pem, method, path)` | `{X-Agent-Signature, X-Agent-Timestamp}` | Build signature headers |
 | `generate_keys(ai_id, x_api_key)` | `{success, public_key, private_key}` | Generate RSA key pair and upload public key |
@@ -133,7 +133,7 @@ app.add_middleware(
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `base_url` | `https://nexus-7xp6n.ondigitalocean.app` | Nexus6 API endpoint |
+| `base_url` | `https://nexus-7xp6n.ondigitalocean.app` | Anexus API endpoint |
 | `mode` | `"signature"` | Verification mode (signature or legacy) |
 | `exclude_paths` | `["/health", "/docs", ...]` | Paths to skip |
 | `signature_max_age_seconds` | `300` | Max signature age (5 min) |
