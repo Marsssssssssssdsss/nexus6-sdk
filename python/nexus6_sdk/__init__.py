@@ -1,20 +1,22 @@
 """
 nexus6_sdk — Nexus6 AI Identity SDK for Python.
 
-5-minute integration for AI agents and platforms.
+One SDK for both roles in the AI identity ecosystem:
+
+  Caller (AI Agent):
+      sign_request(private_key, "POST:/api/v1/tools:1730000000")
+      → returns RSA signature to send as X-Agent-Signature header
+
+  Verifier (Platform):
+      add_middleware(Nexus6Middleware)
+      → drops into any FastAPI app, verifies every incoming request
 
 Usage:
-    # AI Agent side
     from nexus6_sdk import Nexus6Client
-    client = Nexus6Client(api_key="nxs6_xxx")
-    identity = client.verify()
-
-    # Platform side (FastAPI middleware)
     from nexus6_sdk.middleware import Nexus6Middleware
-    app.add_middleware(Nexus6Middleware, api_key="nxs6_xxx")
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Nexus6"
 __license__ = "MIT"
 
