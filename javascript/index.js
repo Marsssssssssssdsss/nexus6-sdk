@@ -3,7 +3,7 @@ const crypto = require('crypto');
 
 const DEFAULT_BASE_URL = 'https://nexus-7xp6n.ondigitalocean.app';
 
-class Nexus6Client {
+class AnexusClient {
   constructor(options = {}) {
     this.apiKey = options.apiKey || null;
     this.baseUrl = options.baseUrl || DEFAULT_BASE_URL;
@@ -161,7 +161,7 @@ class Nexus6Client {
 
   }
 
-function createNexus6Middleware(options = {}) {
+function createAnexusMiddleware(options = {}) {
   const {
     mode = 'signature',
     excludePaths = ['/health', '/favicon.ico'],
@@ -170,7 +170,7 @@ function createNexus6Middleware(options = {}) {
     signatureMaxAgeSeconds = 300,
   } = options;
 
-  return async function nexus6Middleware(req, res, next) {
+  return async function AnexusMiddleware(req, res, next) {
     const path = req.url.split('?')[0];
     if (excludePaths.some(p => path.startsWith(p))) {
       return next();
@@ -190,7 +190,7 @@ async function handleApiKeyMode(req, res, next, { baseUrl, onVerified }) {
     return next();
   }
 
-  const client = new Nexus6Client({ baseUrl });
+  const client = new AnexusClient({ baseUrl });
   const result = await client.verify(apiKey);
 
   if (!result.verified) {
@@ -242,7 +242,7 @@ async function handleSignatureMode(req, res, next, { baseUrl, signatureMaxAgeSec
   if (cached && now - cached.cachedAt < 3600) {
     publicKey = cached.key;
   } else {
-    const client = new Nexus6Client({ baseUrl });
+    const client = new AnexusClient({ baseUrl });
     publicKey = await client.fetchPublicKeyByApiKey(apiKey);
     if (publicKey) {
       publicKeyCache.set(apiKey, { key: publicKey, cachedAt: now });
@@ -257,7 +257,7 @@ async function handleSignatureMode(req, res, next, { baseUrl, signatureMaxAgeSec
     return;
   }
 
-  const client = new Nexus6Client({ baseUrl });
+  const client = new AnexusClient({ baseUrl });
   const isValid = client.verifySignatureOffline(publicKey, message, signature);
 
   if (!isValid) {
@@ -274,4 +274,4 @@ async function handleSignatureMode(req, res, next, { baseUrl, signatureMaxAgeSec
   next();
 }
 
-module.exports = { Nexus6Client, createNexus6Middleware };
+module.exports = { AnexusClient, createAnexusMiddleware };
