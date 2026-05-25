@@ -1,12 +1,12 @@
-# Nexus6 JavaScript SDK
+# Anexus JavaScript SDK
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Marsssssssssssdsss/nexus6-sdk/blob/main/LICENSE)
-[![npm install](https://img.shields.io/badge/npm-install-blue)](https://github.com/Marsssssssssssdsss/nexus6-sdk)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Marsssssssssssdsss/Anexus-sdk/blob/main/LICENSE)
+[![npm install](https://img.shields.io/badge/npm-install-blue)](https://github.com/Marsssssssssssdsss/Anexus-sdk)
 
 ## Installation
 
 ```bash
-npm install github:Marsssssssssssdsss/nexus6-sdk
+npm install github:Marsssssssssssdsss/Anexus-sdk
 ```
 
 Requirements: Node.js 16+, `axios`
@@ -14,9 +14,9 @@ Requirements: Node.js 16+, `axios`
 ## Quick Start
 
 ```javascript
-const { Nexus6Client } = require('nexus6-sdk/javascript');
+const { AnexusClient } = require('Anexus-sdk/javascript');
 
-const client = new Nexus6Client();
+const client = new AnexusClient();
 
 // 1. Register your AI agent
 const result = await client.register('My AI Agent', {
@@ -43,11 +43,11 @@ console.log(token);  // { token: 'idt_xxx', expires_in: 300 }
 ### AI Agent
 
 ```javascript
-const { Nexus6Client } = require('nexus6-sdk/javascript');
+const { AnexusClient } = require('Anexus-sdk/javascript');
 
 class MyAIAgent {
   constructor() {
-    this.client = new Nexus6Client();
+    this.client = new AnexusClient();
   }
 
   async bootstrap() {
@@ -76,10 +76,10 @@ class MyAIAgent {
 
 ```javascript
 const express = require('express');
-const { createNexus6Middleware } = require('nexus6-sdk/javascript');
+const { createAnexusMiddleware } = require('Anexus-sdk/javascript');
 
 const app = express();
-app.use(createNexus6Middleware());
+app.use(createAnexusMiddleware());
 
 app.post('/api/chat', (req, res) => {
   // req.aiIdentity is auto-populated
@@ -100,10 +100,10 @@ app.listen(3000);
 ### Standalone Verification
 
 ```javascript
-const { Nexus6Client } = require('nexus6-sdk/javascript');
+const { AnexusClient } = require('Anexus-sdk/javascript');
 
 async function verifyRequest(req) {
-  const client = new Nexus6Client();
+  const client = new AnexusClient();
   const apiKey = req.headers['x-api-key'];
   
   if (!apiKey) {
@@ -131,7 +131,7 @@ app.post('/api/secure', async (req, res) => {
 
 ## API Reference
 
-### Nexus6Client
+### AnexusClient
 
 | Method | Returns | Description |
 |--------|---------|-------------|
@@ -160,7 +160,7 @@ app.post('/api/secure', async (req, res) => {
 | `headerName` | `"X-API-Key"` | Header name |
 | `excludePaths` | `["/health", "/favicon.ico"]` | Skip paths |
 | `onVerified` | `null` | Callback(req, identity) |
-| `baseUrl` | Nexus6 cloud | Verification endpoint |
+| `baseUrl` | Anexus cloud | Verification endpoint |
 
 ## License
 
