@@ -22,7 +22,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Marsssssssssssdsss/Anexus-sdk"
+    "url": "https://github.com/Marsssssssssssdsss/nexus6-sdk"
   },
   "dependencies": {
     "axios": "^1.16.1"
