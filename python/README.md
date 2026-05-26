@@ -1,108 +1,91 @@
 # Anexus Python SDK
 
-[![PyPI](https://img.shields.io/pypi/v/Anexus-sdk?color=blue)](https://pypi.org/project/Anexus-sdk/)
-[![Python](https://img.shields.io/pypi/pyversions/Anexus-sdk)](https://pypi.org/project/Anexus-sdk/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Marsssssssssssdsss/Anexus-sdk/blob/main/LICENSE)
+One SDK for both sides of AI identity:
+
+- **Caller** (AI Agent) — register an identity, sign every request with HMAC-SHA256
+- **Verifier** (Platform) — drop in 1 line of middleware, verify every incoming request
+
+Zero cryptography dependencies. Uses Python stdlib `hmac` + `hashlib`.
+
+---
 
 ## Installation
 
 ```bash
-pip install Anexus-sdk
+pip install anexus-sdk
 ```
 
-## Quick Start — Register a new AI agent
+---
+
+## Quick Start
+
+### 1. Register an Identity
 
 ```python
-from Anexus_sdk import AnexusClient
+from anexus_sdk import AnexusClient
 
 client = AnexusClient()
-
-# Register — you get an identity + RSA key pair
 result = client.register(name="My AI Agent")
-print(result["api_key"])      # nxs6_xxx — your identifier
-print(result["public_key"])   # RSA public key (stored on Anexus)
-print(result["private_key"])  # RSA private key — save securely!
+api_key = result["api_key"]       # nxs6_xxxxxxxxx
+agent_secret = result["agent_secret"]  # as_xxxxxxxxx — save this!
 ```
 
-## Quick Start — Sign and verify (5 lines)
+### 2. Sign Every Outgoing Request
 
 ```python
-import time
-from Anexus_sdk import AnexusClient
-
-client = AnexusClient()
-
-# 1. Sign a request with your private key
-message = f"POST:/api/v1/tools:{int(time.time())}"
-signature = client.sign_request(private_key_pem, message)
-
-# 2. Verify on the other side
-result = client.verify(
-    api_key="nxs6_xxx",
-    signature=signature,
-    timestamp=str(int(time.time())),
-    method="POST",
-    path="/api/v1/tools"
-)
-print(result["verified"])  # True
+headers = client.build_auth_headers(agent_secret, "POST", "/api/v1/chat")
+headers["X-API-Key"] = api_key
+# → {
+#     "X-API-Key": "nxs6_xxx",
+#     "X-Agent-Signature": "abc123...",
+#     "X-Agent-Timestamp": "1700000000"
+# }
 ```
 
-## How It Works
+The signature is `HMAC-SHA256(agent_secret, "METHOD:/path:timestamp")`. Each signature is valid for 5 minutes and tied to one specific method + path.
 
-```
-AI Agent                          Platform
-    │                                 │
-    ├─ Register → get RSA keys        │
-    │                                 │
-    ├─ sign_request(private_key,      │
-    │   "GET:/api/data:ts")           │
-    │                                 │
-    ├─ Send headers:                  │
-    │   X-API-Key: nxs6_xxx           │
-    │   X-Agent-Signature: <base64>   │
-    │   X-Agent-Timestamp: <ts>       │
-    │                       ─────►    │
-    │                                 ├─ Lookup public key by api_key
-    │                                 ├─ Verify RSA signature locally
-    │                                 ├─ ✅ Identity verified (under 100ms)
-    │                                 └─ Process request
-```
-
-## Platform Integration (FastAPI)
-
-One line of middleware. Every incoming request is verified automatically.
+### 3. Verify on the Platform Side (FastAPI)
 
 ```python
-from fastapi import FastAPI, Request
-from Anexus_sdk.middleware import AnexusMiddleware
-
-app = FastAPI()
+from anexus_sdk.middleware import AnexusMiddleware
 app.add_middleware(AnexusMiddleware)
 
-@app.post("/api/chat")
+@app.post("/api/v1/chat")
 async def chat(request: Request):
     identity = request.state.ai_identity
-    return {"message": f"Verified AI: {identity['identity']['api_key']}"}
+    # → {"verified": True, "identity": {"api_key": "nxs6_...", "verified_by": "hmac-signature"}}
 ```
 
-### Expected Headers
+---
 
-| Header | Value | Required |
-|--------|-------|----------|
-| `X-API-Key` | `nxs6_xxx` | Yes |
-| `X-Agent-Signature` | base64(RSA-SHA256) | Yes |
-| `X-Agent-Timestamp` | Unix timestamp | Yes |
+## Architecture
 
-### Custom Configuration
-
-```python
-app.add_middleware(
-    AnexusMiddleware,
-    base_url="https://your-Anexus-instance.com",
-    exclude_paths=["/health", "/docs"],
-    signature_max_age_seconds=60,  # default: 300
-)
 ```
+┌─────────────────────────────────────────────────────┐
+│                  Caller (AI Agent)                   │
+│                                                       │
+│  register() ───→ POST /api/v1/agents/register        │
+│                  ← { api_key, agent_secret }         │
+│                                                       │
+│  build_auth_headers(secret, method, path)             │
+│  → HMAC-SHA256(secret, "METHOD:/path:timestamp")     │
+│  → X-Agent-Signature + X-Agent-Timestamp headers      │
+└──────────────────────────┬──────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────┐
+│                  Verifier (Platform)                  │
+│                                                       │
+│  AnexusMiddleware                                      │
+│  1. Read X-API-Key, X-Agent-Signature, Timestamp     │
+│  2. Fetch agent_secret from Anexus (cached 1 hour)   │
+│  3. Recalculate HMAC locally                          │
+│  4. Compare → pass or 401                             │
+│  5. request.state.ai_identity = result                │
+└─────────────────────────────────────────────────────┘
+```
+
+---
 
 ## API Reference
 
@@ -110,41 +93,32 @@ app.add_middleware(
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `register(name, **kwargs)` | `{success, agent_id, api_key, private_key, public_key}` | Register new AI agent with RSA keys |
-| `verify(api_key, signature, timestamp, method, path)` | `{verified, id, name, ...}` | Verify RSA signature against Anexus |
-| `sign_request(private_key_pem, message)` | `str` | Sign a message with RSA private key |
-| `build_auth_headers(private_key_pem, method, path)` | `{X-Agent-Signature, X-Agent-Timestamp}` | Build signature headers |
-| `generate_keys(ai_id, x_api_key)` | `{success, public_key, private_key}` | Generate RSA key pair and upload public key |
-| `fetch_public_key(ai_id)` | `str or None` | Fetch public key by agent ID |
-| `fetch_public_key_by_api_key(api_key)` | `str or None` | Fetch public key by API key |
-| `verify_signature_offline(public_key_pem, message, signature)` | `bool` | Verify RSA signature locally |
+| `register(name, **kwargs)` | `{success, api_key, agent_secret}` | Register a new identity |
+| `sign_request(agent_secret, method, path, timestamp)` | `str` | Generate HMAC-SHA256 hex digest |
+| `build_auth_headers(agent_secret, method, path)` | `dict` | Build `X-Agent-Signature` + `X-Agent-Timestamp` headers |
+| `verify(api_key, signature, timestamp, method, path)` | `{verified, id, name}` | Verify an identity against Anexus |
+| `create_token(api_key)` | `dict` | Create a short-lived session token |
 
-### Register Parameters
+### AnexusMiddleware
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `name` | Yes | AI agent name |
-| `title` | No | Display title |
-| `ai_type` | No | Type: assistant, coding, customer_service, etc. |
-| `description` | No | What the AI does |
-| `developer_email` | No | Developer contact |
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `base_url` | `https://nexus-7xp6n.ondigitalocean.app` | Anexus API base URL |
+| `exclude_paths` | `["/health", "/docs", "/openapi.json"]` | Paths to skip verification |
+| `signature_max_age_seconds` | `300` | Max age of a valid signature |
 
-### Middleware Options
+---
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `base_url` | `https://nexus-7xp6n.ondigitalocean.app` | Anexus API endpoint |
-| `mode` | `"signature"` | Verification mode (signature or legacy) |
-| `exclude_paths` | `["/health", "/docs", ...]` | Paths to skip |
-| `signature_max_age_seconds` | `300` | Max signature age (5 min) |
-| `on_verified` | `None` | Callback(request, identity) |
+## Why not API keys?
 
-## Requirements
+A leaked API key is usable forever by anyone. Anexus uses per-request HMAC signatures:
 
-- Python 3.9+
-- `httpx`
-- `starlette` (for middleware)
-- `cryptography` (for RSA signing/verification)
+- Each signature is unique to one method + path + timestamp
+- The `agent_secret` never travels over the network after registration
+- Middleware fetches and caches secrets, not keys — no external call per request
+- No OAuth, no browser redirects, no RSA, no dependencies
+
+---
 
 ## License
 
