@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Anexus-sdk"
+name = "anexus-sdk"
 version = "0.2.0"
 description = "Anexus AI Identity SDK — universal identity verification for AI agents"
 readme = "README.md"
@@ -26,16 +26,12 @@ requires-python = ">=3.9"
 dependencies = [
     "httpx>=0.24.0",
     "starlette>=0.27.0",
-    "cryptography>=41.0.0",
 ]
 
-[project]
-name = "anexus-sdk"
-
 [project.urls]
-Homepage = "https://github.com/Marsssssssssssdsss/anexus-sdk"
+Homepage = "https://github.com/Marsssssssssssdsss/nexus6-sdk"
 Documentation = "https://nexus-7xp6n.ondigitalocean.app"
-Source = "https://github.com/Marsssssssssssdsss/anexus-sdk"
+Source = "https://github.com/Marsssssssssssdsss/nexus6-sdk"
 
 [tool.setuptools.packages.find]
 include = ["anexus_sdk*"]
