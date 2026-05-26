@@ -1,12 +1,12 @@
 # Anexus JavaScript SDK
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Marsssssssssssdsss/Anexus-sdk/blob/main/LICENSE)
-[![npm install](https://img.shields.io/badge/npm-install-blue)](https://github.com/Marsssssssssssdsss/Anexus-sdk)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/Marsssssssssssdsss/nexus6-sdk/blob/main/LICENSE)
+[![npm install](https://img.shields.io/badge/npm-install-blue)](https://github.com/Marsssssssssssdsss/nexus6-sdk)
 
 ## Installation
 
 ```bash
-npm install github:Marsssssssssssdsss/Anexus-sdk
+npm install github:Marsssssssssssdsss/nexus6-sdk
 ```
 
 Requirements: Node.js 16+, `axios`
