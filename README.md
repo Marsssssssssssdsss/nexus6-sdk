@@ -6,9 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/anexus-sdk/"><img src="https://img.shields.io/pypi/v/anexus-sdk?color=blue" alt="PyPI"></a>
   <a href="https://github.com/Marsssssssssssdsss/nexus6-sdk/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
-  <a href="https://pypi.org/project/anexus-sdk/"><img src="https://img.shields.io/pypi/pyversions/anexus-sdk" alt="Python"></a>
 </p>
 
 ---
@@ -49,7 +47,7 @@ Anexus provides a universal identity verification layer for AI Agents. Any platf
 ### Python (1-line middleware for platform)
 
 ```bash
-pip install anexus-sdk
+pip install git+https://github.com/Marsssssssssssdsss/nexus6-sdk.git#subdirectory=python
 ```
 
 ```python
@@ -78,7 +76,7 @@ headers["X-API-Key"] = api_key
 ### One-time registration
 
 ```bash
-pip install anexus-sdk
+pip install git+https://github.com/Marsssssssssssdsss/nexus6-sdk.git#subdirectory=python
 python -c "
 from anexus_sdk import AnexusClient
 r = AnexusClient().register(name='my-agent')
@@ -145,5 +143,5 @@ The middleware fetches the agent's secret from Anexus (cached for 1 hour), recom
 ## Links
 
 - **Live API:** https://nexus-7xp6n.ondigitalocean.app
-- **PyPI:** https://pypi.org/project/anexus-sdk/
+- **GitHub:** https://github.com/Marsssssssssssdsss/nexus6-sdk
 - **License:** MIT
