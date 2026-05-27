@@ -12,7 +12,7 @@ Zero cryptography dependencies. Uses Python stdlib `hmac` + `hashlib`.
 ## Installation
 
 ```bash
-pip install anexus-sdk
+pip install git+https://github.com/Marsssssssssssdsss/nexus6-sdk.git#subdirectory=python
 ```
 
 ---
