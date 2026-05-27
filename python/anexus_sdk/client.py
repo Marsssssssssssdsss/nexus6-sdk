@@ -16,7 +16,9 @@ class AnexusClient:
         self.base_url = base_url.rstrip("/")
 
     def register(self, name: str, **kwargs) -> Dict[str, Any]:
-        payload = {"name": name, **kwargs}
+        if not name or not name.strip():
+            return {"success": False, "error": "Agent name is required"}
+        payload = {"name": name.strip(), **kwargs}
         try:
             with httpx.Client(timeout=10) as http:
                 resp = http.post(
@@ -28,14 +30,20 @@ class AnexusClient:
                     self.api_key = result.get("api_key")
                     self.agent_secret = result.get("agent_secret")
                 return result
+        except httpx.TimeoutException:
+            return {"success": False, "error": "Registration timed out. Check your network and base_url."}
         except Exception as e:
             return {"success": False, "error": f"Registration failed: {str(e)}"}
 
     def sign_request(self, agent_secret: str, method: str, path: str, timestamp: str) -> str:
+        if not agent_secret:
+            raise ValueError("agent_secret is required to sign a request")
         message = f"{method}:{path}:{timestamp}"
         return hmac.new(agent_secret.encode(), message.encode(), hashlib.sha256).hexdigest()
 
     def build_auth_headers(self, agent_secret: str, method: str = "GET", path: str = "/") -> Dict[str, str]:
+        if not agent_secret:
+            return {"error": "agent_secret is required"}
         timestamp = str(int(time.time()))
         signature = self.sign_request(agent_secret, method, path, timestamp)
         return {
@@ -45,7 +53,7 @@ class AnexusClient:
 
     def verify(self, api_key: Optional[str] = None, signature: Optional[str] = None,
                timestamp: Optional[str] = None, method: str = "POST",
-               path: str = "/api/v1/identity/verify") -> Dict[str, Any]:
+               request_path: str = "/") -> Dict[str, Any]:
         key = api_key or self.api_key
         if not key:
             return {"verified": False, "error": "no_api_key", "details": "Provide api_key or set it in client."}
@@ -55,7 +63,7 @@ class AnexusClient:
                 body["signature"] = signature
                 body["timestamp"] = timestamp
                 body["method"] = method
-                body["path"] = path
+                body["path"] = request_path
             with httpx.Client(timeout=10) as http:
                 resp = http.post(
                     f"{self.base_url}/api/v1/identity/verify",
