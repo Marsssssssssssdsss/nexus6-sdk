@@ -131,6 +131,9 @@ class AnexusMiddleware(BaseHTTPMiddleware):
         agent_secret = await self._fetch_agent_secret(api_key)
         if agent_secret:
             with self._cache_lock:
+                if len(self._secret_cache) > 1000:
+                    oldest = min(self._secret_cache.keys(), key=lambda k: self._secret_cache[k][1])
+                    del self._secret_cache[oldest]
                 self._secret_cache[api_key] = (agent_secret, time.time())
 
         return agent_secret
@@ -147,5 +150,9 @@ class AnexusMiddleware(BaseHTTPMiddleware):
                     if data.get("success"):
                         return data["agent_secret"]
                 return None
+        except httpx.TimeoutException:
+            return None
+        except httpx.HTTPStatusError:
+            return None
         except Exception:
             return None
