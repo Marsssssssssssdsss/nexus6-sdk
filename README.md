@@ -1,56 +1,91 @@
-# Anexus SDK
+# Anexus Identity — MCP Server
 
-AI identity for your MCP server. One header, one line.
+Verify any AI Agent's identity. One command, any MCP-compatible client.
 
-## Python (FastAPI)
+## For AI Assistants (Claude Code, Codex, Cursor)
 
-```bash
-pip install git+https://github.com/Marsssssssssssdsss/nexus6-sdk.git#subdirectory=python
+Add to your MCP config file:
+
+```json
+{
+  "mcpServers": {
+    "anexus": {
+      "command": "python",
+      "args": ["-m", "anexus_mcp.server"]
+    }
+  }
+}
 ```
+
+Then ask your AI:
+
+> "Verify agent ID: nxs6_47dd35b83e80415d9e19af3bedcad2fb"
+
+The AI calls our MCP tool → returns verified identity details.
+
+Works with: **Claude Code**, **Codex**, **Cursor**, **Claude Desktop**, and any MCP-compatible client.
+
+## For Developers (protect your API)
+
+Add our middleware to auto-verify agents by their `X-Agent-ID` header:
 
 ```python
 from anexus_sdk.middleware import AnexusMiddleware
 app.add_middleware(AnexusMiddleware)
 ```
 
-Done. Every request with `X-Agent-ID` header is verified automatically.
+Requests with `X-Agent-ID` are verified automatically. Invalid IDs get 401.
 
-## JavaScript (Express)
-
-```bash
-npm install github:Marsssssssssssdsss/nexus6-sdk
-```
-
-```javascript
-const { createAnexusMiddleware } = require('anexus-sdk/javascript');
-app.use(createAnexusMiddleware());
-```
-
-## How it works
-
-An agent registers once and gets a permanent identity:
+## Register an Agent
 
 ```python
 from anexus_sdk import AnexusClient
 
 client = AnexusClient()
 result = client.register("my-agent")
-# → stores this agent_id forever:
-agent_id = result["api_key"]  # nxs6_xxxxxxxxx
+agent_id = result["api_key"]  # permanent identity token
 ```
 
-Every request just sends the agent_id in a header:
+Or via API:
+
+```bash
+curl https://nexus-7xp6n.ondigitalocean.app/api/v1/agents/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"my-agent"}'
+```
+
+Returns: `{"success": true, "api_key": "nxs6_xxxxxxxxx", "id": "ai_xxxxxxxx"}`
+
+## How it works
 
 ```
-X-Agent-ID: nxs6_xxxxxxxxx
+Agent                MCP Client (Claude Code/Codex)     Anexus Backend
+  │                          │                                │
+  │── X-Agent-ID ──────────►│                                │
+  │                          │── verify_identity(agent_id) ──►│
+  │                          │◄── {verified, id, name} ──────│
+  │                          │                                │
+  │                          │  (or automatically via middleware)
 ```
 
-The middleware checks it against our service and caches the result for 1 hour. That's it. No signing, no tokens, no expiry.
+## Quick Start
 
-## Docs
+```bash
+pip install git+https://github.com/Marsssssssssssdsss/nexus6-sdk.git#subdirectory=python
+```
 
-- Python SDK: [python/README.md](python/README.md)
-- JavaScript SDK: [javascript/README.md](javascript/README.md)
+```python
+from anexus_sdk import AnexusClient
+
+client = AnexusClient()
+result = client.register("demo-agent")
+print(result["api_key"])
+```
+
+## SDK Docs
+
+- [Python SDK](python/README.md) — client + FastAPI middleware
+- [JavaScript SDK](javascript/README.md) — client + Express middleware
 
 ## License
 
