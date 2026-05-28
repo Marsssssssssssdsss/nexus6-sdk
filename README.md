@@ -1,71 +1,46 @@
-# Anexus Identity — MCP Server
+# Anexus
 
-Verify any AI Agent's identity. One command, any MCP-compatible client.
+AI Agent identity. One header, one line.
 
-## For AI Assistants (Claude Code, Codex, Cursor)
+## For Agent Developers
 
-Add to your MCP config file:
-
-```json
-{
-  "mcpServers": {
-    "anexus": {
-      "command": "python",
-      "args": ["-m", "anexus_mcp.server"]
-    }
-  }
-}
-```
-
-Then ask your AI:
-
-> "Verify agent ID: nxs6_47dd35b83e80415d9e19af3bedcad2fb"
-
-The AI calls our MCP tool → returns verified identity details.
-
-Works with: **Claude Code**, **Codex**, **Cursor**, **Claude Desktop**, and any MCP-compatible client.
-
-## For Developers (protect your API)
-
-Add our middleware to auto-verify agents by their `X-Agent-ID` header:
-
-```python
-from anexus_sdk.middleware import AnexusMiddleware
-app.add_middleware(AnexusMiddleware)
-```
-
-Requests with `X-Agent-ID` are verified automatically. Invalid IDs get 401.
-
-## Register an Agent
+Register your agent once. Get a permanent identity token. Every service that uses Anexus will recognize it automatically.
 
 ```python
 from anexus_sdk import AnexusClient
 
 client = AnexusClient()
 result = client.register("my-agent")
-agent_id = result["api_key"]  # permanent identity token
+agent_id = result["api_key"]  # nxs6_xxxxxxxxx
 ```
 
-Or via API:
+Then send it as a header:
 
-```bash
-curl https://nexus-7xp6n.ondigitalocean.app/api/v1/agents/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"my-agent"}'
+```
+X-Agent-ID: nxs6_xxxxxxxxx
 ```
 
-Returns: `{"success": true, "api_key": "nxs6_xxxxxxxxx", "id": "ai_xxxxxxxx"}`
+## For Service Providers
+
+Add one line of middleware. Every incoming request with a valid `X-Agent-ID` is automatically verified. Invalid identities get 401.
+
+```python
+from anexus_sdk.middleware import AnexusMiddleware
+app.add_middleware(AnexusMiddleware)
+```
+
+That's it. No OAuth setup. No login pages. Just verify AI agents by their identity.
 
 ## How it works
 
 ```
-Agent                MCP Client (Claude Code/Codex)     Anexus Backend
-  │                          │                                │
-  │── X-Agent-ID ──────────►│                                │
-  │                          │── verify_identity(agent_id) ──►│
-  │                          │◄── {verified, id, name} ──────│
-  │                          │                                │
-  │                          │  (or automatically via middleware)
+Agent                          Your MCP Server
+  │                                  │
+  │── X-Agent-ID header ────────────►│
+  │                                  ├── verify with Anexus backend
+  │                                  │── verified → allow
+  │                                  │── invalid → 401
+  │◄── response ────────────────────│
 ```
 
 ## Quick Start
@@ -82,7 +57,7 @@ result = client.register("demo-agent")
 print(result["api_key"])
 ```
 
-## SDK Docs
+## Docs
 
 - [Python SDK](python/README.md) — client + FastAPI middleware
 - [JavaScript SDK](javascript/README.md) — client + Express middleware
