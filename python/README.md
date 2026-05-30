@@ -1,55 +1,98 @@
-# Anexus Python SDK
+# Anexus SDK — Auth Codes for AI Agents
 
-## Server side (FastAPI)
+Let your AI act on your behalf. One login, one-time verification codes for any platform.
 
-```bash
+```
 pip install git+https://github.com/Marsssssssssssdsss/nexus6-sdk.git#subdirectory=python
 ```
 
-```python
-from anexus_sdk.middleware import AnexusMiddleware
-app.add_middleware(AnexusMiddleware)
+## Quick Start
+
+### 1. Login (human, one-time)
+
+```bash
+python -m anexus_sdk login
 ```
 
-Requests without `X-Agent-ID` pass through. Requests with `X-Agent-ID` are verified automatically.
+Opens your browser → you sign in → session token saved automatically.  
+Just like GitHub Copilot's device flow.
 
-Access the verified identity in your handlers:
-
-```python
-@app.post("/api/v1/tools")
-async def handle(request: Request):
-    identity = request.state.ai_identity
-    # {"verified": True, "id": "ai_xxx", "name": "my-agent"}
-```
-
-## Agent side (register once, use forever)
+### 2. Generate a verification code (AI does this)
 
 ```python
-from anexus_sdk import AnexusClient
+from anexus_sdk import generate_code
 
-client = AnexusClient()
-result = client.register(name="My Agent")
-agent_id = result["api_key"]  # nxs6_xxxxxxxxx
+result = generate_code("shopify")
+code = result["code"]  # anx://shopify/user_xxx?exp=3600&ts=...
 ```
 
-Then send `X-Agent-ID: nxs6_xxxxxxxxx` with every request.
+Or via CLI:
 
-## Configuration
-
-```python
-AnexusMiddleware(
-    app,
-    base_url="https://nexus-7xp6n.ondigitalocean.app",
-    exclude_paths=["/health", "/docs"],
-)
+```bash
+python -m anexus_sdk code shopify
 ```
 
-## API
+### 3. Use the code to call the target platform
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/agents/register` | POST | Register a new agent → `{api_key}` |
-| `/api/v1/identity/verify` | POST | Verify an agent's identity |
+Your AI passes the code (e.g., `anx://shopify/user_xxx?exp=3600&ts=...`) to the target platform's API or MCP server. The platform verifies it by calling our API.
+
+## For Platform Developers
+
+Verify incoming auth codes with your API Key:
+
+```bash
+curl -X POST https://your-anexus-host/api/v1/codes/verify \
+  -H "x-api-key: nxs6_xxx" \
+  -d '{"code": "anx://shopify/user_xxx?exp=3600&ts=..."}'
+```
+
+Get your API Key from the [Dashboard](https://your-anexus-host/dashboard).
+
+## SDK Reference
+
+### `generate_code(target, session_token=None, base_url=None)`
+
+Request a one-time verification code for a target platform.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `target` | `str` | Platform name (e.g., `shopify`, `notion`, `slack`) |
+| `session_token` | `str` | Optional. Reads from `~/.anexus/token` if not provided |
+| `base_url` | `str` | Optional. API base URL |
+
+Returns:
+
+```json
+{
+  "success": true,
+  "code": "anx://shopify/user_xxx?exp=3600&ts=...",
+  "target": "shopify",
+  "expires_in": "1 hour",
+  "geo_location": ""
+}
+```
+
+### CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `python -m anexus_sdk login` | Browser-based login (GitHub Copilot style) |
+| `python -m anexus_sdk code <platform>` | Generate verification code |
+
+## Architecture
+
+```
+Human                     AI Agent                    Target Platform
+  │                          │                              │
+  │── login (browser) ──────►                              │
+  │                          │                              │
+  │                    generate_code("shopify")             │
+  │                          │                              │
+  │                          │── anx://shopify/... ────────►│
+  │                          │                              ├── POST /codes/verify
+  │                          │                              │── verified → allow
+  │                          │◄──── response ──────────────│
+```
 
 ## License
 
