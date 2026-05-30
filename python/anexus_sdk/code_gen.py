@@ -2,9 +2,18 @@
 
 Usage (CLI):
     python -m anexus_sdk.code_gen --target shopify
+    python -m anexus_sdk login         # Login first
+    python -m anexus_sdk whoami        # Check login status
 
 Usage (SDK — for AI agents):
-    from anexus_sdk import generate_code
+    from anexus_sdk import generate_code, check_login
+
+    # Before generating a code, check if logged in:
+    status = check_login()
+    if not status["logged_in"]:
+        print("Please login first")
+        return
+
     result = generate_code("shopify")
     code = result["code"]  # anx://shopify/user_xxx?exp=3600&ts=xxx
 
@@ -18,6 +27,53 @@ from typing import Optional
 
 TOKEN_PATH = os.path.expanduser("~/.anexus/token")
 BASE_URL = os.environ.get("ANEXUS_BASE_URL", "http://localhost:8000")
+
+
+def _read_token(session_token: Optional[str] = None) -> Optional[str]:
+    """Read session token from param or file. Returns None if missing."""
+    if session_token:
+        return session_token
+    if not os.path.exists(TOKEN_PATH):
+        return None
+    with open(TOKEN_PATH) as f:
+        token = f.read().strip()
+    return token if token else None
+
+
+def check_login(
+    session_token: Optional[str] = None,
+    base_url: Optional[str] = None,
+) -> dict:
+    """Check if the current session is still valid.
+
+    AI agents should call this before generate_code() to verify
+    the human has an active session:
+        status = check_login()
+        if status["logged_in"]:
+            print(f"Logged in as {status['username']}")
+
+    Returns:
+        dict with keys: logged_in (bool), plus user info if logged in,
+        or error message if not.
+    """
+    token = _read_token(session_token)
+    if not token:
+        return {"logged_in": False, "error": "Not logged in. Run `python -m anexus_sdk login` first."}
+
+    url = (base_url or BASE_URL).rstrip("/")
+    req = Request(
+        f"{url}/api/v1/session/check",
+        headers={"x-session-token": token},
+    )
+
+    try:
+        with urlopen(req) as resp:
+            data = json.loads(resp.read())
+        return data
+    except URLError as e:
+        return {"logged_in": False, "error": f"Network error: {e.reason}"}
+    except json.JSONDecodeError:
+        return {"logged_in": False, "error": "Invalid response from server"}
 
 
 def generate_code(
@@ -41,17 +97,12 @@ def generate_code(
     if not target:
         return {"success": False, "error": "Target platform is required"}
 
-    if not session_token:
-        if not os.path.exists(TOKEN_PATH):
-            return {
-                "success": False,
-                "error": "No session token found. Run `python -m anexus_sdk login` first.",
-            }
-        with open(TOKEN_PATH) as f:
-            session_token = f.read().strip()
-
-    if not session_token:
-        return {"success": False, "error": "Empty session token. Please login again."}
+    token = _read_token(session_token)
+    if not token:
+        return {
+            "success": False,
+            "error": "No session token found. Run `python -m anexus_sdk login` first.",
+        }
 
     url = (base_url or BASE_URL).rstrip("/")
     payload = json.dumps({"target": target.strip().lower()}).encode()
@@ -60,7 +111,7 @@ def generate_code(
         data=payload,
         headers={
             "Content-Type": "application/json",
-            "x-session-token": session_token,
+            "x-session-token": token,
         },
     )
 
