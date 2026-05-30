@@ -23,11 +23,17 @@ class AnexusMiddleware(BaseHTTPMiddleware):
         base_url: str = DEFAULT_BASE_URL,
         exclude_paths: Optional[List[str]] = None,
         on_verified: Optional[Callable] = None,
+        audit_logging: bool = False,
+        audit_level: str = "basic",
+        service_provider: str = "",
     ):
         super().__init__(app)
         self.base_url = base_url.rstrip("/")
         self.exclude_paths = exclude_paths or ["/health", "/docs", "/openapi.json", "/favicon.ico"]
         self.on_verified = on_verified
+        self.audit_logging = audit_logging
+        self.audit_level = audit_level
+        self.service_provider = service_provider
 
         self._verify_cache: Dict[str, tuple] = {}
         self._cache_lock = Lock()
@@ -39,24 +45,73 @@ class AnexusMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         agent_id = request.headers.get("X-Agent-ID")
+        start_time = time.time()
 
         if not agent_id:
-            return await call_next(request)
+            response = await call_next(request)
+            if self.audit_logging:
+                await self._send_audit_log({
+                    "agent_id": "anonymous",
+                    "agent_name": "",
+                    "service_provider": self.service_provider or "unknown",
+                    "endpoint": path,
+                    "method": request.method,
+                    "status_code": response.status_code,
+                    "duration_ms": int((time.time() - start_time) * 1000),
+                    "log_level": self.audit_level,
+                })
+            return response
 
         verified = await self._verify_identity(agent_id)
 
         if not verified.get("verified"):
-            return JSONResponse(
+            error_response = JSONResponse(
                 status_code=401,
                 content={"error": "Invalid AI identity", "details": verified.get("error", "")}
             )
+            if self.audit_logging:
+                await self._send_audit_log({
+                    "agent_id": agent_id,
+                    "agent_name": "",
+                    "service_provider": self.service_provider or "unknown",
+                    "endpoint": path,
+                    "method": request.method,
+                    "status_code": 401,
+                    "duration_ms": int((time.time() - start_time) * 1000),
+                    "log_level": self.audit_level,
+                })
+            return error_response
 
         request.state.ai_identity = verified
 
         if self.on_verified:
             self.on_verified(request, verified)
 
-        return await call_next(request)
+        response = await call_next(request)
+
+        if self.audit_logging:
+            await self._send_audit_log({
+                "agent_id": agent_id,
+                "agent_name": verified.get("name", ""),
+                "service_provider": self.service_provider or "unknown",
+                "endpoint": path,
+                "method": request.method,
+                "status_code": response.status_code,
+                "duration_ms": int((time.time() - start_time) * 1000),
+                "log_level": self.audit_level,
+            })
+
+        return response
+
+    async def _send_audit_log(self, record: dict):
+        try:
+            async with httpx.AsyncClient(timeout=2) as http:
+                await http.post(
+                    f"{self.base_url}/api/v1/call-history/record",
+                    json=[record]
+                )
+        except Exception:
+            pass
 
     async def _verify_identity(self, agent_id: str) -> dict:
         cache_entry = self._verify_cache.get(agent_id)
