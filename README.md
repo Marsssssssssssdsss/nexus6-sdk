@@ -1,66 +1,34 @@
-# Anexus
+# Anexus — Auth Codes for AI Agents
 
-AI Agent identity. One header, one line.
-
-## For Agent Developers
-
-Register your agent once. Get a permanent identity token. Every service that uses Anexus will recognize it automatically.
-
-```python
-from anexus_sdk import AnexusClient
-
-client = AnexusClient()
-result = client.register("my-agent")
-agent_id = result["api_key"]  # nxs6_xxxxxxxxx
-```
-
-Then send it as a header:
+One login. Your AI gets one-time verification codes to act on your behalf.
 
 ```
-X-Agent-ID: nxs6_xxxxxxxxx
-```
-
-## For Service Providers
-
-Add one line of middleware. Every incoming request with a valid `X-Agent-ID` is automatically verified. Invalid identities get 401.
-
-```python
-from anexus_sdk.middleware import AnexusMiddleware
-app.add_middleware(AnexusMiddleware)
-```
-
-That's it. No OAuth setup. No login pages. Just verify AI agents by their identity.
-
-## How it works
-
-```
-Agent                          Your MCP Server
-  │                                  │
-  │── X-Agent-ID header ────────────►│
-  │                                  ├── verify with Anexus backend
-  │                                  │── verified → allow
-  │                                  │── invalid → 401
-  │◄── response ────────────────────│
+pip install git+https://github.com/Marsssssssssssdsss/nexus6-sdk.git#subdirectory=python
 ```
 
 ## Quick Start
 
 ```bash
-pip install git+https://github.com/Marsssssssssssdsss/nexus6-sdk.git#subdirectory=python
+python -m anexus_sdk login     # Browser login (GitHub Copilot style)
+python -m anexus_sdk code shopify  # Generate verification code
 ```
 
 ```python
-from anexus_sdk import AnexusClient
-
-client = AnexusClient()
-result = client.register("demo-agent")
-print(result["api_key"])
+from anexus_sdk import generate_code
+code = generate_code("shopify")["code"]
+# anx://shopify/user_xxx?exp=3600&ts=...
 ```
 
-## Docs
+## SDKs
 
-- [Python SDK](python/README.md) — client + FastAPI middleware
-- [JavaScript SDK](javascript/README.md) — client + Express middleware
+- [Python SDK](python/) — `login`, `generate_code`, CLI
+- [JavaScript SDK](javascript/) — coming soon
+
+## How it works
+
+1. **Human logs in** — one-time browser login, token saved automatically
+2. **AI gets a code** — calls `generate_code("shopify")` from the SDK
+3. **AI calls platform** — passes the code, platform verifies via our API
 
 ## License
 
