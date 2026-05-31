@@ -20,7 +20,11 @@ For AI agents (programmatic):
     code = result["code"]
     # -> "anx://shopify/user_xxx?exp=3600&ts=xxx"
 
-For platform developers:
+Platform developers use `anexus_verify` (a separate package) to verify codes:
+    pip install anexus-verify
+    from anexus_verify import verify_code
+
+Legacy:
     from anexus_sdk import AnexusClient
     from anexus_sdk.middleware import AnexusMiddleware
 """

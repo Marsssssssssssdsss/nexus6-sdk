@@ -1,4 +1,5 @@
 """Generate an auth verification code for your AI to access a platform.
+For end users and AI agents. Platform developers use anexus_verify instead.
 
 Usage (CLI):
     python -m anexus_sdk.code_gen --target shopify

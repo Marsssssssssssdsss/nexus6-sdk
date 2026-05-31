@@ -31,4 +31,4 @@ Documentation = "https://github.com/Marsssssssssssdsss/nexus6-sdk"
 Source = "https://github.com/Marsssssssssssdsss/nexus6-sdk"
 
 [tool.setuptools.packages.find]
-include = ["anexus_sdk*"]
+include = ["anexus_sdk*", "anexus_verify*"]
