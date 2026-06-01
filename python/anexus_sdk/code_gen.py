@@ -27,7 +27,7 @@ from urllib.error import URLError
 from typing import Optional
 
 TOKEN_PATH = os.path.expanduser("~/.anexus/token")
-BASE_URL = os.environ.get("ANEXUS_BASE_URL", "http://localhost:8000")
+BASE_URL = os.environ.get("ANEXUS_BASE_URL", "https://nexus-7xp6n.ondigitalocean.app")
 
 
 def _read_token(session_token: Optional[str] = None) -> Optional[str]:
