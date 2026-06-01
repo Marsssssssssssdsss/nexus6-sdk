@@ -14,7 +14,7 @@ from typing import Optional
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
-BASE_URL = os.environ.get("ANEXUS_BASE_URL", "http://localhost:8000")
+BASE_URL = os.environ.get("ANEXUS_BASE_URL", "https://nexus-7xp6n.ondigitalocean.app")
 
 
 def verify_code(
