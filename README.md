@@ -42,7 +42,15 @@ code = generate_code("shopify")["code"]
 # Pass this code to the target platform
 ```
 
-### For platform developers
+## For Platform Developers
+
+Your users' AI agents are starting to call your API. When they do, you need to know:
+
+- Is this really a verified AI agent, or someone impersonating one?
+- Which user authorized this agent to act?
+- Can I audit every AI agent action?
+
+Anexus solves this with one endpoint and one API key.
 
 ```bash
 pip install anexus-verify
@@ -51,6 +59,7 @@ pip install anexus-verify
 ```python
 from anexus_verify import verify_code
 
+# In your API endpoint that accepts AI agent requests:
 result = verify_code(
     code="anx://shopify/user_abc123?exp=3600&ts=1717000000",
     api_key="nxs6_xxxxxxxxxxxx",
@@ -58,7 +67,11 @@ result = verify_code(
 
 if result["verified"]:
     grant_access(result["username"], result["permissions"])
+    # username: who authorized this
+    # permissions: what they allowed
 ```
+
+> **Getting started:** Contact us at 2787200350@qq.com or open an issue on GitHub to get your platform API key. Integration takes about 15 minutes.
 
 ---
 
