@@ -1,8 +1,8 @@
 <div align="center">
 
-# Anexus
+# AI Agent Identity — verify which agent is calling your API
 
-**Auth codes for AI agents. One login, your AI acts on your behalf.**
+When an AI agent shows up at your API endpoint, how do you know it's really who it claims to be?
 
 <p align="center">
   <a href="https://pypi.org/project/anexus-sdk/"><img src="https://img.shields.io/pypi/v/anexus-sdk?label=anexus-sdk&color=3b82f6" /></a>
@@ -12,10 +12,10 @@
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#use-cases">Use Cases</a> •
+  <a href="#the-problem">The Problem</a> •
   <a href="#how-it-works">How It Works</a> •
-  <a href="python/">Documentation</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="python/">Docs</a> •
   <a href="examples/">Examples</a>
 </p>
 
@@ -23,34 +23,59 @@
 
 ---
 
+## The Problem
+
+Three things are true right now:
+
+1. AI agents are calling more and more APIs — your users' agents want to query their Shopify, read their Notion, send emails on their behalf
+2. The only way to give an agent access today is to share a permanent API key or a session cookie — which means the agent has indefinite access, and if that key leaks, so does everything it protects
+3. When an agent calls your API, you have no way to verify: is this a real agent acting on behalf of a real user, or someone impersonating one?
+
+This repo is a working implementation that solves all three.
+
+## How It Works
+
+Instead of sharing permanent secrets, the user authenticates once (standard OAuth), and the agent generates short-lived, scoped verification codes on demand.
+
+```
+End User              AI Agent              Platform API
+  │                      │                      │
+  │── login once ───────►│                      │
+  │                      │── generate_code() ──►│
+  │                      │   (scoped, 1hr TTL)  │
+  │                      │                      │── verify_code()
+  │                      │                      │   → returns user identity
+  │                      │◄── access granted ───│
+```
+
+**What each side does:**
+
+| Side | What they get | What it solves |
+|------|--------------|----------------|
+| **End user** | Log in once, their AI acts for them without sharing permanent keys | No more "here's my API key, don't lose it" |
+| **AI agent** | Generates a verification code per-platform, per-session | Agent has exactly the access it needs, for exactly as long as it needs |
+| **Platform API** | Receives a code, calls `verify_code()`, gets back who the user is | Never needs to store agent credentials, just verifies on the fly |
+
 ## Quick Start
 
-### For end users
+### For an end user
 
 ```bash
 pip install anexus-sdk
-python -m anexus_sdk login    # Opens browser → sign in → token saved
+python -m anexus_sdk login    # Opens browser → sign in → token saved locally
 ```
 
-### For AI agents
+### For an AI agent
 
 ```python
 from anexus_sdk import generate_code
 
 code = generate_code("shopify")["code"]
-# → "anx://shopify/user_abc123?exp=3600&ts=1717000000"
-# Pass this code to the target platform
+# → returns a one-time verification code, valid for 1 hour
+# Pass this code instead of an API key
 ```
 
-## For Platform Developers
-
-Your users' AI agents are starting to call your API. When they do, you need to know:
-
-- Is this really a verified AI agent, or someone impersonating one?
-- Which user authorized this agent to act?
-- Can I audit every AI agent action?
-
-Anexus solves this with one endpoint and one API key.
+### For a platform that accepts AI agent calls
 
 ```bash
 pip install anexus-verify
@@ -59,7 +84,7 @@ pip install anexus-verify
 ```python
 from anexus_verify import verify_code
 
-# In your API endpoint that accepts AI agent requests:
+# In your endpoint:
 result = verify_code(
     code="anx://shopify/user_abc123?exp=3600&ts=1717000000",
     api_key="nxs6_xxxxxxxxxxxx",
@@ -67,95 +92,26 @@ result = verify_code(
 
 if result["verified"]:
     grant_access(result["username"], result["permissions"])
-    # username: who authorized this
-    # permissions: what they allowed
 ```
 
-> **Getting started:** Contact us at 2787200350@qq.com or open an issue on GitHub to get your platform API key. Integration takes about 15 minutes.
+## The Difference This Makes
 
----
+**Without this approach:**
+- API keys live in `.env` files that agents can read and exfiltrate
+- A leaked key means permanent access until manually revoked
+- No audit trail for which agent did what
 
-## Use Cases
-
-| Scenario | Without Anexus | With Anexus |
-|----------|---------------|-------------|
-| AI needs to query your Shopify orders | Share a permanent API token (risky) | Generate a one-time code, valid for 1 hour |
-| AI needs to read your Notion docs | Paste your session cookie (insecure) | Generate a scoped code, expires automatically |
-| Platform accepts AI agent calls | Build your own OAuth + identity system | Use `verify_code()` — 5 lines of code |
-| User wants AI to act on their behalf | Manual delegation, no standard | Login once, AI generates codes automatically |
-
----
-
-## How It Works
-
-```
-         ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-         │   End User   │         │   AI Agent   │         │   Platform   │
-         │              │         │              │         │  (Shopify)   │
-         │ login once ──┼────────►│ check_login()│         │              │
-         │              │         │      │       │         │              │
-         │              │         │ generate_    │         │              │
-         │              │         │ code("shop"  │         │              │
-         │              │         │      │       │         │              │
-         │              │         │  code ───────┼────────►│ verify_code()│
-         │              │         │              │         │      │       │
-         │              │         │              │         │ grant access │
-         └──────────────┘         └──────────────┘         └──────────────┘
-           anexus-sdk                anexus-sdk              anexus-verify
-```
-
-1. **User logs in once** — browser-based OAuth, token saved locally
-2. **AI checks login** — `check_login()` ensures session is valid
-3. **AI requests a code** — `generate_code("shopify")` returns a one-time verification code
-4. **AI sends code to platform** — the code is passed to the target platform's API
-5. **Platform verifies** — `verify_code(code, api_key)` returns the user's identity
-6. **Access granted** — platform knows exactly who this user is and what they can do
-
----
-
-## Packages
-
-| Package | Install | For | Contains |
-|---------|---------|-----|----------|
-| `anexus-sdk` | `pip install anexus-sdk` | End users & AI agents | `login`, `check_login()`, `generate_code()` |
-| `anexus-verify` | `pip install anexus-verify` | Platform developers | `verify_code()` |
-
----
-
-## Why Auth Codes?
-
-**Before — sharing secrets is dangerous:**
-```
-User shares API key with AI → AI has permanent access → key can be leaked
-```
-
-**With Anexus — codes are scoped and temporary:**
-```
-User logs in once → AI generates anx://shopify/user_xxx?exp=3600&ts=...
-                      ↑ exp=3600 → expires in 1 hour
-                      ↑ ts=... → timestamped, prevents replay
-                      ↑ user=xxx → identifies the user
-                      ↑ one-time use → cannot be reused
-```
-
----
+**With this approach:**
+- No permanent secrets stored where the agent can read them
+- Every access is scoped to a specific platform and expires automatically
+- The platform sees exactly which user authorized the call
 
 ## Examples
 
-See the [examples/](examples/) directory for complete integrations:
-
-- [Flask platform integration](examples/python/flask_platform.py) — Verify codes in a Flask app
-- [FastAPI platform integration](examples/python/fastapi_platform.py) — Verify codes in a FastAPI app
-- [AI Agent workflow](examples/python/ai_agent.py) — Generate codes as an AI agent
-- [Express.js middleware](examples/javascript/express_middleware.js) — Verify codes in Node.js
-
----
-
-## Documentation
-
-Full documentation is in the [Python SDK directory](python/).
-
----
+- [Flask integration](examples/python/flask_platform.py) — verify agent identity in a Flask app
+- [FastAPI integration](examples/python/fastapi_platform.py) — verify in a FastAPI app
+- [AI Agent workflow](examples/python/ai_agent.py) — generate codes as an AI agent
+- [Express.js middleware](examples/javascript/express_middleware.js) — verify in Node.js
 
 ## License
 
