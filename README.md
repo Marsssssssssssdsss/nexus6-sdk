@@ -1,60 +1,84 @@
 <div align="center">
 
-# AI Agent Identity — verify which agent is calling your API
+# Anexus — Runtime Identity Layer for AI Agents
 
-When an AI agent shows up at your API endpoint, how do you know it's really who it claims to be?
+**AI不该持有永久凭证。人类授权的那一瞬间，AI获得一个短期通道。**
 
 <p align="center">
   <a href="https://pypi.org/project/anexus-sdk/"><img src="https://img.shields.io/pypi/v/anexus-sdk?label=anexus-sdk&color=3b82f6" /></a>
   <a href="https://pypi.org/project/anexus-verify/"><img src="https://img.shields.io/pypi/v/anexus-verify?label=anexus-verify&color=a855f7" /></a>
   <a href="python/"><img src="https://img.shields.io/badge/python-3.9%2B-blue" /></a>
+  <a href="https://nexus-7xp6n.ondigitalocean.app"><img src="https://img.shields.io/badge/platform-online-green" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" /></a>
 </p>
 
 <p align="center">
   <a href="#the-problem">The Problem</a> •
   <a href="#how-it-works">How It Works</a> •
+  <a href="#core-capabilities">Core Capabilities</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="python/">Docs</a> •
-  <a href="examples/">Examples</a>
+  <a href="#platform">Platform</a> •
+  <a href="python/">SDK Docs</a>
 </p>
 
 </div>
 
 ---
 
+## Tagline
+
+就像让朋友临时进你家。AI也一样。
+
+---
+
 ## The Problem
 
-Three things are true right now:
+开发者给AI配置API Key的时候，没人知道这个Key会被用来干什么。一次错误操作、一次配置变更、一次数据删除——出事的时候，用户怪的是你的平台。
 
-1. AI agents are calling more and more APIs — your users' agents want to query their Shopify, read their Notion, send emails on their behalf
-2. The only way to give an agent access today is to share a permanent API key or a session cookie — which means the agent has indefinite access, and if that key leaks, so does everything it protects
-3. When an agent calls your API, you have no way to verify: is this a real agent acting on behalf of a real user, or someone impersonating one?
+**核心问题只有一个：AI不该持有永久凭证。**
 
-This repo is a working implementation that solves all three.
+---
 
 ## How It Works
 
-Instead of sharing permanent secrets, the user authenticates once (standard OAuth), and the agent generates short-lived, scoped verification codes on demand.
+我们为客户生成临时API凭证，就像让朋友只能临时进入你的房子一样。
+
+人类授权的那一瞬间，AI获得一个短期通道。任务完成，通道关闭。没有残留，没有需要轮换的Key。
+
+一套薄层，一行代码接入你的现有身份系统。
 
 ```
 End User              AI Agent              Platform API
   │                      │                      │
   │── login once ───────►│                      │
-  │                      │── generate_code() ──►│
+  │  (human authorizes)  │── generate_code() ──►│
   │                      │   (scoped, 1hr TTL)  │
   │                      │                      │── verify_code()
   │                      │                      │   → returns user identity
   │                      │◄── access granted ───│
+  │                      │   (temp channel)     │
+  │                      │         │            │
+  │                      │   task done          │
+  │                      │   channel closes     │
 ```
 
-**What each side does:**
+---
 
-| Side | What they get | What it solves |
-|------|--------------|----------------|
-| **End user** | Log in once, their AI acts for them without sharing permanent keys | No more "here's my API key, don't lose it" |
-| **AI agent** | Generates a verification code per-platform, per-session | Agent has exactly the access it needs, for exactly as long as it needs |
-| **Platform API** | Receives a code, calls `verify_code()`, gets back who the user is | Never needs to store agent credentials, just verifies on the fly |
+## Core Capabilities
+
+### 1. 瞬态授权
+人类授权的那一刻，通道打开；任务完成，通道关闭。不需要API Key轮换，不需要OAuth重定向。
+
+### 2. Undo / Rollback
+任何AI操作都可以一键撤销，回到操作前的状态。就像从来没发生过。
+
+### 3. 双库存交叉加密
+两个独立代码库，运行时交叉解密。单一代码泄露毫无意义。
+
+### 4. 收费层
+你把2和3打包成增值服务。你的用户付费，你100%保留收入。
+
+---
 
 ## Quick Start
 
@@ -62,7 +86,7 @@ End User              AI Agent              Platform API
 
 ```bash
 pip install anexus-sdk
-python -m anexus_sdk login    # Opens browser → sign in → token saved locally
+anexus login    # Opens browser → sign in → token saved locally
 ```
 
 ### For an AI agent
@@ -72,7 +96,6 @@ from anexus_sdk import generate_code
 
 code = generate_code("shopify")["code"]
 # → returns a one-time verification code, valid for 1 hour
-# Pass this code instead of an API key
 ```
 
 ### For a platform that accepts AI agent calls
@@ -94,17 +117,16 @@ if result["verified"]:
     grant_access(result["username"], result["permissions"])
 ```
 
-## The Difference This Makes
+---
 
-**Without this approach:**
-- API keys live in `.env` files that agents can read and exfiltrate
-- A leaked key means permanent access until manually revoked
-- No audit trail for which agent did what
+## Platform
 
-**With this approach:**
-- No permanent secrets stored where the agent can read them
-- Every access is scoped to a specific platform and expires automatically
-- The platform sees exactly which user authorized the call
+- **Web Platform:** [https://nexus-7xp6n.ondigitalocean.app](https://nexus-7xp6n.ondigitalocean.app)
+- **Identity API:** `POST /api/v1/identity/token` → generate one-time token
+- **Verify API:** `POST /api/v1/identity/token/verify` → verify and consume token
+- **AI Discovery:** Browse and discover AI agents on the platform
+
+---
 
 ## Examples
 
@@ -112,6 +134,18 @@ if result["verified"]:
 - [FastAPI integration](examples/python/fastapi_platform.py) — verify in a FastAPI app
 - [AI Agent workflow](examples/python/ai_agent.py) — generate codes as an AI agent
 - [Express.js middleware](examples/javascript/express_middleware.js) — verify in Node.js
+
+---
+
+## SDK Packages
+
+| Package | Language | Install | Description |
+|---------|----------|---------|-------------|
+| [anexus-sdk](https://pypi.org/project/anexus-sdk/) | Python | `pip install anexus-sdk` | SDK for AI agents to generate verification codes |
+| [anexus-verify](https://pypi.org/project/anexus-verify/) | Python | `pip install anexus-verify` | Server-side verification for platform APIs |
+| [nexus6-sdk](javascript/) | JavaScript | `npm install nexus6-sdk` | JavaScript SDK |
+
+---
 
 ## License
 
